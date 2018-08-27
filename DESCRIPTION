@@ -1,11 +1,22 @@
 Package: firestoneAg
 Type: Package
-Title: What the Package Does (Title Case)
-Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Title: Firestone Ag Data from 2018 Firestone Databook
+Version: 0.0.0.9000
+Authors@R: person("Glenn", "Sanders", email = "glennwilliamsanders@gmail.com", role = c("aut", "cre"))
+Description: Provides the data from the 2018 Firestone Ag book availabe at:
+  https://commercial.firestone.com/content/dam/bcs-sites/firestone/AG/Databook/2018%20FIRESTONE%20AG%20DATA%20BOOK%20-%20FIRESTONE%20AGRICULTURE.pdf
+URL: http://github.com/glennSanders/firestoneAg.git
+BugReports: http://github.com//glennSanders/firestoneAg/issues
+Depends: R (>= 3.5.0)
+License: GPL-3
 Encoding: UTF-8
 LazyData: true
+Imports:
+    units,
+    Rdpack
+RdMacros: Rdpack
+RoxygenNote: 6.0.1
+Suggests: knitr,
+    rmarkdown,
+    tidyverse
+VignetteBuilder: knitr
