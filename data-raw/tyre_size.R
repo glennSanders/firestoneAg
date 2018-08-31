@@ -14,7 +14,7 @@ tyre_regex <- list(
   "OVERALL WIDTH" = "[0-9]{1,2}\\.[0-9]{1}",
   "OVERALL DIA." = "[0-9]{1,2}\\.[0-9]{1}",
   "STATIC LOADED RADIUS" = "[0-9]{1,2}\\.[0-9]{1}",
-  "ROLLING CIRCUM." = "[0-9]{3}|-",
+  "ROLLING CIRCUM." = "[0-9]{2,3}|-",
   "ROLLING CIRCUM. INDEX" = "[0-9]{2}|-",
   "BAR HEIGHT 32NDS" = "[0-9]{2}",
   "BAR HEIGHT INCHES" = "[0-9]{1}\\.[0-9]{2}",
@@ -135,7 +135,12 @@ fsAg_data$tractor <- fsAg_data$tractor %>%
   mutate(`ROLLING CIRCUM. INDEX` = replace(`ROLLING CIRCUM. INDEX`,
                                      `MATERIAL NUMBER` == "003779",
                                      "-"))
+# ensure there is a space after @
+fsAg_data$tractor <-
+  fsAg_data$tractor %>%
+  mutate(`MAX LOAD & INFL. (LBS @ PSI)` = str_replace(
+    `MAX LOAD & INFL. (LBS @ PSI)`,"@(?=[0-9])","@ "))
 
-mapply(testthat::expect_match,fsAg_data$tractor,tyre_regex)
+# Test the data
 
-fsAg_data$tractor$`ROLLING CIRCUM.`
+lapply(fsAg_data, function(x) mapply(testthat::expect_match,x,tyre_regex))
