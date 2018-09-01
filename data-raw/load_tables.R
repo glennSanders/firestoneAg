@@ -58,23 +58,15 @@ fsAg_data <- lapply(table_pages$PAGE, function(x,data) data[x],fsAg_data)
 # remove stop words for every page
 fsAg_data <- lapply(fsAg_data,str_remove_all,paste0(stop_words,collapse = "|"))
 
+# replace the stars
+fsAg_data <- lapply(fsAg_data, str_replace_all,"[^[:ascii:]]","*")
+
 # split the data into lines
 fsAg_data <- lapply(fsAg_data, function(x) lapply(x, str_split, "\\r\\n", simplify = TRUE))
 # remove empty lines
 fsAg_data <- lapply(fsAg_data, function(x) lapply(x, function(y) y[!str_detect(y,"^\\s+$|^$")]))
 
-# make lines the same length
-pad_line <- function(x) {
-  x <- str_pad(x,max(nchar(x)),"right")
-  return(x)
-}
-fsAg_data <- lapply(fsAg_data, function(x) lapply(x, pad_line))
-
-### adjust spacing of lines
-
-# The white space between LI and symbol rows lines up
-x <- fsAg_data$`TABLE A`[[1]]
-
+### align Columns
 align_cols <- function(x,align_dir = c("left","right"),ncol = NULL) {
   i <- str_locate_all(x,"[^\\s]+")
   i_end <- sapply(i, function(x) x[,2])
@@ -112,6 +104,10 @@ align_cols <- function(x,align_dir = c("left","right"),ncol = NULL) {
   },i_end,str_parts)
 }
 
+### TEST
+
+x <- fsAg_data$`TABLE A`[[1]]
+
 # find the LI and symbol lines and align them to the left
 i <- str_detect(x,"\\bsymbol\\b| LI ")
 x[i] <- align_cols(x[i],"left")
@@ -120,10 +116,9 @@ x[i] <- align_cols(x[i],"left")
 i <- str_detect(x,"SINGLES|DUALS|TRIPLES|(psi\\s+[0-9])")
 x[i] <- align_cols(x[i],c("right",rep("left",sum(i)-1)),c(14,rep(15,sum(i)-1)))
 
-x
+# detect table
+i <- str_detect(x,"SINGLES|DUALS|TRIPLES|(psi\\s+[0-9])|\\bsymbol\\b| LI ")
+y <- paste0(x[i],collapse = "\n")
 
-### TEST
-fwf_empty(paste0(y,collapse = "\n"))
-
-View(read_fwf(paste0(y,collapse = "\n"),fwf_empty(paste0(y,collapse = "\n"),n=5L)))
-data.table::fread(paste0(y,collapse = "\n"),fill = TRUE)
+# create data.frame
+tb <- suppressWarnings(read_fwf(y,fwf_empty(y)))
