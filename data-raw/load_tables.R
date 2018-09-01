@@ -90,58 +90,23 @@ common_end_locs <- function(x,line_regex,align_dir = c("left","right")) {
          align_dir,n)
   col_list <- split(unlist(list),1:n)
   end_posn <- unname(sapply(col_list,function(x) as.integer(tail(names(sort(table(x))),1))))
-  lapply(i_end,function(x, align_dir, n, end_posn) switch(align_dir,
-                                                  left = c(end_posn[1:length(x)],NA_integer_[0:(n-length(x))]),
-                                                  right = c(NA_integer_[0:(n-length(x))],end_posn[(n-length(x)+1):n])),
+  i_end <- lapply(i_end,function(x, align_dir, n, end_posn) switch(align_dir,
+                                                  left = end_posn[1:length(x)],
+                                                  right = end_posn[(n-length(x)+1):n]),
          align_dir,n, end_posn)
+  str_parts <- str_extract_all(line_subset,"[^\\s]+")
+
+  mapply(function(i_end,str_parts) {
+    # add extra fro non-ascii
+    n <- c(i_end[1],diff(i_end)) + str_count(str_parts,"[^[:ascii:]]")*2
+    do.call(sprintf, c(list(paste0("%",paste0(n,collapse = "s%"),"s")),
+                       str_parts))
+  },i_end,str_parts)
+
 }
 # find most common end posn
-i_end <- common_end_locs(x,"\\bsymbol\\b| LI ","left")
+common_end_locs(x,"\\bsymbol\\b| LI ","left")
 # extract the words
-
-x <- fsAg_data$`TABLE A`[[1]]
-line_regex <- "\\bsymbol\\b| LI "
-align_dir <- "left"
-
-line_subset <- x[str_detect(x,line_regex)]
-
-str_parts <- str_extract_all(line_subset,"[^\\s]+")
-
-
-
-
-mat <- matrix(unlist(i_start), nrow = length(i_start), byrow = TRUE)
-
-mat
-
-tail(names(sort(table(Forbes2000$category))), 1)
-
-names(sort(table(mat[,1])))
-
-
-library(data.table)
-as.data.table(  matrix(unlist(i_start), nrow = length(i_start), byrow = TRUE))[, .N, by=][, x[N == max(N)]]
-
-seq.max <- seq_len(max(n.obs))
-# create a matrix of the size required
-mat <- matrix(NA_integer_,ncol = max(n.obs), nrow = length(i_start))
-
-mat[1,1:6] <- i_start[[1]]
-mat
-
-t(sapply(i_start, "[", i = seq.max))
-
-plyr::ldply(sapply(i, function(x) x[,1]), rbind)
-
-stringi::stri_list2matrix(sapply(i, function(x) x[,1]), byrow=TRUE)
-
-sprintf("%-10s","abc")
-
-max(nchar(x))
-x <- fsAg_data$`TABLE A`
-max(nchar(x))
-y <- sapply(x, str_pad,max(nchar(x)),"right")
-y[[1]]
 
 # adjust the main table
 # find the location of SINGLES DUALS TRIPLES
