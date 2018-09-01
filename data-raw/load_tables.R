@@ -74,20 +74,8 @@ fsAg_data <- lapply(fsAg_data, function(x) lapply(x, pad_line))
 
 # The white space between LI and symbol rows lines up
 x <- fsAg_data$`TABLE A`[[1]]
-# for each column find most common start
-# left align and right align gaps
-# line_subset <- x[str_detect(x,line_regex)]
 
-common_end_locs <- function(x,align_dir = c("left","right")) {
-  #TODO: Choose how many columns to change position of
-  # align_dir <- c("right",rep("left",length(i_end)-1))
-  # i <- str_detect(x,"SINGLES|DUALS|TRIPLES|(psi\\s+[0-9])")
-  # x <- x[i]
-
-  align_dir <- "left"
-  i <- str_detect(x,"\\bsymbol\\b| LI ")
-  x <- x[i]
-
+align_cols <- function(x,align_dir = c("left","right"),ncol = NULL) {
   i <- str_locate_all(x,"[^\\s]+")
   i_end <- sapply(i, function(x) x[,2])
   n <- max(sapply(i_end, length))
@@ -97,11 +85,24 @@ common_end_locs <- function(x,align_dir = c("left","right")) {
                  i_end,align_dir,MoreArgs = list(n=n), SIMPLIFY = FALSE)
   col_list <- split(unlist(list),1:n)
   end_posn <- unname(sapply(col_list,function(x) as.integer(tail(names(sort(table(x))),1))))
-  i_end <- mapply(function(x, align_dir, n, end_posn) switch(align_dir,
+  i_end_new <- mapply(function(x, align_dir, n, end_posn) switch(align_dir,
                                                                    left = end_posn[1:length(x)],
                                                                    right = end_posn[(n-length(x)+1):n]),
                   i_end,align_dir,MoreArgs = list(n=n, end_posn=end_posn), SIMPLIFY = FALSE)
   str_parts <- str_extract_all(x,"[^\\s]+")
+  # take an index and only change the indices required
+  if (!is.null(ncol)) {
+    i_end <- mapply(function(i_end,i_end_new,align_dir,ncol) {
+      l <- length(i_end)
+      ncol <- min(l,ncol)
+      switch(align_dir,
+             right = i_end[(l-ncol+1):l] <- i_end_new[(l-ncol+1):l],
+             left = i_end[1:ncol] <- i_end_new[1:ncol])
+      return(i_end)
+    },i_end,i_end_new, align_dir, ncol, SIMPLIFY = FALSE)
+  } else {
+    i_end <- i_end_new
+  }
 
   mapply(function(i_end,str_parts) {
     # add extra fro non-ascii
@@ -113,11 +114,13 @@ common_end_locs <- function(x,align_dir = c("left","right")) {
 
 # find the LI and symbol lines and align them to the left
 i <- str_detect(x,"\\bsymbol\\b| LI ")
-x[i] <- common_end_locs(x[i],"left")
+x[i] <- align_cols(x[i],"left")
 
-# the SINGLES, DOUBLES, TRIPLES line are aligned to the left
-i <- str_detect(x,"SINGLES|DUALS|TRIPLES")
-x[i] <- common_end_locs(x[i],"left")
+# the SINGLES, DOUBLES, TRIPLES line are aligned to the left and psi to right
+i <- str_detect(x,"SINGLES|DUALS|TRIPLES|(psi\\s+[0-9])")
+x[i] <- align_cols(x[i],c("right",rep("left",sum(i)-1)),c(14,rep(15,sum(i)-1)))
+
+x
 
 ### TEST
 fwf_empty(paste0(y,collapse = "\n"))
