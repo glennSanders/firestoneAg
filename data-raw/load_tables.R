@@ -76,25 +76,26 @@ fsAg_data <- lapply(fsAg_data, function(x) lapply(x, pad_line))
 x <- fsAg_data$`TABLE A`[[1]]
 # for each column find most common start
 # left align and right align gaps
-common_end_locs <- function(x,line_regex,align_dir = c("left","right")) {
-  # x <- fsAg_data$`TABLE A`[[1]]
-  # line_regex <- "\\bsymbol\\b| LI "
-  # align_dir <- "left"
-  line_subset <- x[str_detect(x,line_regex)]
-  i <- str_locate_all(line_subset,"[^\\s]+")
+# line_subset <- x[str_detect(x,line_regex)]
+
+common_end_locs <- function(x,align_dir = c("left","right")) {
+  #TODO: Choose how many columns to change position of
+
+
+  i <- str_locate_all(x,"[^\\s]+")
   i_end <- sapply(i, function(x) x[,2])
   n <- max(sapply(i_end, length))
   list <- lapply(i_end,function(x, align_dir, n) switch(align_dir,
-                                                  left = x[1:n],
-                                                  right = c(NA_integer_[0:(n-length(x))],x)),
-         align_dir,n)
+                                                        left = x[1:n],
+                                                        right = c(NA_integer_[0:(n-length(x))],x)),
+                 align_dir,n)
   col_list <- split(unlist(list),1:n)
   end_posn <- unname(sapply(col_list,function(x) as.integer(tail(names(sort(table(x))),1))))
   i_end <- lapply(i_end,function(x, align_dir, n, end_posn) switch(align_dir,
-                                                  left = end_posn[1:length(x)],
-                                                  right = end_posn[(n-length(x)+1):n]),
-         align_dir,n, end_posn)
-  str_parts <- str_extract_all(line_subset,"[^\\s]+")
+                                                                   left = end_posn[1:length(x)],
+                                                                   right = end_posn[(n-length(x)+1):n]),
+                  align_dir,n, end_posn)
+  str_parts <- str_extract_all(x,"[^\\s]+")
 
   mapply(function(i_end,str_parts) {
     # add extra fro non-ascii
@@ -102,120 +103,18 @@ common_end_locs <- function(x,line_regex,align_dir = c("left","right")) {
     do.call(sprintf, c(list(paste0("%",paste0(n,collapse = "s%"),"s")),
                        str_parts))
   },i_end,str_parts)
-
-}
-# find most common end posn
-common_end_locs(x,"\\bsymbol\\b| LI ","left")
-# extract the words
-
-# adjust the main table
-# find the location of SINGLES DUALS TRIPLES
-i <- sapply(str_locate_all(x,"SINGLES|DUALS|TRIPLES"),function(x) x[1])
-maximum_i <- max(i,na.rm = TRUE)
-diff_i <- maximum_i-i
-common_i <- as.integer(names(which.max(table(diff_i))))
-diff_i[is.na(diff_i)] <- common_i
-y <- paste0(sapply(diff_i, function(x) paste0(rep(" ",x),collapse = "")),x)
-
-# adjust the table headers
-i <- str_locate_all(x[str_detect(x,"psi")][1],"[aA-zZ0-9]+")[[1]][,1]
-j <- str_locate_all(x[str_detect(x,"SINGLES|DUALS|TRIPLES")][1],"[aA-zZ0-9]+")[[1]][,1]
-#work backwards
-additional_whitespace <- tail(j,length(i)-1)-tail(i,-1)
-white_space_total <- additional_whitespace
-for(i in 1:(length(additional_whitespace)-1)) {
-  l = length(additional_whitespace)
-  white_space_total[(i+1):l] <- white_space_total[(i+1):l]-additional_whitespace[i]
-  print(white_space_total)
 }
 
+# find the LI and symbol lines and align them to the left
+i <- str_detect(x,"\\bsymbol\\b| LI ")
+x[i] <- common_end_locs(x[i],"left")
 
-n_lines <- which.max(str_detect(y,"psi"))-1
+# the SINGLES, DOUBLES, TRIPLES line are aligned to the left
+i <- str_detect(x,"SINGLES|DUALS|TRIPLES")
+x[i] <- common_end_locs(x[i],"left")
 
-z <- read_fwf(paste0(y,collapse = "\n"),
-              col_positions = fwf_empty(paste0(y,collapse = "\n"),skip = n_lines),
-              skip = n_lines)
-z
-
-
-# fread puts the LI row together
-data.table::fread(paste0(y, collapse = "\n"), skip = "psi",
-                  fill = TRUE,
-                  strip.white = FALSE,
-                  blank.lines.skip = TRUE)
-
-
-
-# do own white space function
-# remove head of characters
-y <- x[-1:(-which.max(str_detect(x,"psi|kPa"))+1)]
-# make strings of same length
-y <- str_pad(y,max(nchar(y)),side = "right")
-# find intersections of white space
-i <- str_locate_all(y,"\\s+")
-# find the white spaces common to all lines
-j <- Reduce(intersect, lapply(i, function(x) unlist(apply(x,1,function(y) seq(y[1],y[2])))))
-# find the locations with values
-k <- setdiff(1:191,j)
-# convert to a start and end value
-
-s <- unname(sapply(split(k,cumsum(c(1,diff(k))>1)),function(x) c(min(x), max(x))))
-posn <- list(`begin` = s[1,],
-             end = s[2,],
-             skip = 0L,
-             col_names = paste("X",1:ncol(s)))
-
-
+### TEST
 fwf_empty(paste0(y,collapse = "\n"))
 
 View(read_fwf(paste0(y,collapse = "\n"),fwf_empty(paste0(y,collapse = "\n"),n=5L)))
 data.table::fread(paste0(y,collapse = "\n"),fill = TRUE)
-
-# remove the page seperations as there are multiple tables per page
-fsAg_data <- lapply(fsAg_data, unlist, use.names= FALSE )
-
-# Table A
-
-# remove the stop words
-data.table::fread(fsAg_data$`TABLE A`[c(19:30)]
-
-# Try tabulizer
-library(tabulizer)
-x <- extract_tables("data-raw/2018 FIRESTONE AG DATA BOOK - FIRESTONE AGRICULTURE.pdf",
-                    method = "lattice",
-               pages = table_pages$PAGE[[1]])
-
-extract_areas("data-raw/2018 FIRESTONE AG DATA BOOK - FIRESTONE AGRICULTURE.pdf",
-              pages = table_pages$PAGE[[1]][1])
-
-get_page_dims("data-raw/2018 FIRESTONE AG DATA BOOK - FIRESTONE AGRICULTURE.pdf",
-              pages = table_pages$PAGE[[1]][1])
-
-column_posns <- list(c(55,106,151,183,210,238,264,291,318,345,372,400,425,453,480,506,535,562))
-
-extract_tables("data-raw/2018 FIRESTONE AG DATA BOOK - FIRESTONE AGRICULTURE.pdf",
-              pages = table_pages$PAGE[[1]][1],
-              columns = column_posns)
-
-
-# load raw data
-fsAg_data <- readRDS("data-raw/fsAg_data")
-
-# split the data into groups by page number
-fsAg_data <- lapply(table_pages$PAGE, function(x,data) data[x],fsAg_data)
-
-# split the data into lines
-fsAg_data <- lapply(fsAg_data, function(x) lapply(x, str_split, "\\r\\n", simplify = TRUE))
-# remove the page seperations as there are multiple tables per page
-fsAg_data <- lapply(fsAg_data, unlist, use.names= FALSE )
-
-# start of table
-table_start <- "LOAD LIMITS AT VARIOUS COLD INFLATION PRESSURES"
-table_finish <- ""
-
-# remove pages with `METRIC UNITS of MEASURE`
-remove_metric_pages <- function(x) {
-  x <- x[!str_detect(x,"METRIC UNITS OF MEASURE")]
-  return(x)
-}
-x <- lapply(fsAg_data,remove_metric_pages)
