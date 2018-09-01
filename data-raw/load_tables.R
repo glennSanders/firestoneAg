@@ -63,8 +63,87 @@ fsAg_data <- lapply(fsAg_data, function(x) lapply(x, str_split, "\\r\\n", simpli
 # remove empty lines
 fsAg_data <- lapply(fsAg_data, function(x) lapply(x, function(y) y[!str_detect(y,"^\\s+$|^$")]))
 
-x <- fsAg_data$`TABLE A`[[1]]
+# make lines the same length
+pad_line <- function(x) {
+  x <- str_pad(x,max(nchar(x)),"right")
+  return(x)
+}
+fsAg_data <- lapply(fsAg_data, function(x) lapply(x, pad_line))
 
+### adjust spacing of lines
+
+# The white space between LI and symbol rows lines up
+x <- fsAg_data$`TABLE A`[[1]]
+# for each column find most common start
+# left align and right align gaps
+common_end_locs <- function(x,line_regex,align_dir = c("left","right")) {
+  # x <- fsAg_data$`TABLE A`[[1]]
+  # line_regex <- "\\bsymbol\\b| LI "
+  # align_dir <- "left"
+  line_subset <- x[str_detect(x,line_regex)]
+  i <- str_locate_all(line_subset,"[^\\s]+")
+  i_end <- sapply(i, function(x) x[,2])
+  n <- max(sapply(i_end, length))
+  list <- lapply(i_end,function(x, align_dir, n) switch(align_dir,
+                                                  left = x[1:n],
+                                                  right = c(NA_integer_[0:(n-length(x))],x)),
+         align_dir,n)
+  col_list <- split(unlist(list),1:n)
+  end_posn <- unname(sapply(col_list,function(x) as.integer(tail(names(sort(table(x))),1))))
+  lapply(i_end,function(x, align_dir, n, end_posn) switch(align_dir,
+                                                  left = c(end_posn[1:length(x)],NA_integer_[0:(n-length(x))]),
+                                                  right = c(NA_integer_[0:(n-length(x))],end_posn[(n-length(x)+1):n])),
+         align_dir,n, end_posn)
+}
+# find most common end posn
+i_end <- common_end_locs(x,"\\bsymbol\\b| LI ","left")
+# extract the words
+
+x <- fsAg_data$`TABLE A`[[1]]
+line_regex <- "\\bsymbol\\b| LI "
+align_dir <- "left"
+
+line_subset <- x[str_detect(x,line_regex)]
+
+str_parts <- str_extract_all(line_subset,"[^\\s]+")
+
+
+
+
+mat <- matrix(unlist(i_start), nrow = length(i_start), byrow = TRUE)
+
+mat
+
+tail(names(sort(table(Forbes2000$category))), 1)
+
+names(sort(table(mat[,1])))
+
+
+library(data.table)
+as.data.table(  matrix(unlist(i_start), nrow = length(i_start), byrow = TRUE))[, .N, by=][, x[N == max(N)]]
+
+seq.max <- seq_len(max(n.obs))
+# create a matrix of the size required
+mat <- matrix(NA_integer_,ncol = max(n.obs), nrow = length(i_start))
+
+mat[1,1:6] <- i_start[[1]]
+mat
+
+t(sapply(i_start, "[", i = seq.max))
+
+plyr::ldply(sapply(i, function(x) x[,1]), rbind)
+
+stringi::stri_list2matrix(sapply(i, function(x) x[,1]), byrow=TRUE)
+
+sprintf("%-10s","abc")
+
+max(nchar(x))
+x <- fsAg_data$`TABLE A`
+max(nchar(x))
+y <- sapply(x, str_pad,max(nchar(x)),"right")
+y[[1]]
+
+# adjust the main table
 # find the location of SINGLES DUALS TRIPLES
 i <- sapply(str_locate_all(x,"SINGLES|DUALS|TRIPLES"),function(x) x[1])
 maximum_i <- max(i,na.rm = TRUE)
@@ -72,6 +151,19 @@ diff_i <- maximum_i-i
 common_i <- as.integer(names(which.max(table(diff_i))))
 diff_i[is.na(diff_i)] <- common_i
 y <- paste0(sapply(diff_i, function(x) paste0(rep(" ",x),collapse = "")),x)
+
+# adjust the table headers
+i <- str_locate_all(x[str_detect(x,"psi")][1],"[aA-zZ0-9]+")[[1]][,1]
+j <- str_locate_all(x[str_detect(x,"SINGLES|DUALS|TRIPLES")][1],"[aA-zZ0-9]+")[[1]][,1]
+#work backwards
+additional_whitespace <- tail(j,length(i)-1)-tail(i,-1)
+white_space_total <- additional_whitespace
+for(i in 1:(length(additional_whitespace)-1)) {
+  l = length(additional_whitespace)
+  white_space_total[(i+1):l] <- white_space_total[(i+1):l]-additional_whitespace[i]
+  print(white_space_total)
+}
+
 
 n_lines <- which.max(str_detect(y,"psi"))-1
 
