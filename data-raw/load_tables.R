@@ -80,21 +80,27 @@ x <- fsAg_data$`TABLE A`[[1]]
 
 common_end_locs <- function(x,align_dir = c("left","right")) {
   #TODO: Choose how many columns to change position of
+  # align_dir <- c("right",rep("left",length(i_end)-1))
+  # i <- str_detect(x,"SINGLES|DUALS|TRIPLES|(psi\\s+[0-9])")
+  # x <- x[i]
 
+  align_dir <- "left"
+  i <- str_detect(x,"\\bsymbol\\b| LI ")
+  x <- x[i]
 
   i <- str_locate_all(x,"[^\\s]+")
   i_end <- sapply(i, function(x) x[,2])
   n <- max(sapply(i_end, length))
-  list <- lapply(i_end,function(x, align_dir, n) switch(align_dir,
+  list <- mapply(function(x, align_dir, n) switch(align_dir,
                                                         left = x[1:n],
                                                         right = c(NA_integer_[0:(n-length(x))],x)),
-                 align_dir,n)
+                 i_end,align_dir,MoreArgs = list(n=n), SIMPLIFY = FALSE)
   col_list <- split(unlist(list),1:n)
   end_posn <- unname(sapply(col_list,function(x) as.integer(tail(names(sort(table(x))),1))))
-  i_end <- lapply(i_end,function(x, align_dir, n, end_posn) switch(align_dir,
+  i_end <- mapply(function(x, align_dir, n, end_posn) switch(align_dir,
                                                                    left = end_posn[1:length(x)],
                                                                    right = end_posn[(n-length(x)+1):n]),
-                  align_dir,n, end_posn)
+                  i_end,align_dir,MoreArgs = list(n=n, end_posn=end_posn), SIMPLIFY = FALSE)
   str_parts <- str_extract_all(x,"[^\\s]+")
 
   mapply(function(i_end,str_parts) {
